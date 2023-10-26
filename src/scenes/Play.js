@@ -8,6 +8,7 @@ class Play extends Phaser.Scene {
         this.load.image('spaceship', './assets/spaceship.png')
         this.load.image('starfield', './assets/starfield.png')
         this.load.spritesheet('explosion', './assets/explosion.png', {frameWidth: 64, frameHeight: 32, startFrame: 0, endFrame: 9})
+        this.load.image('particle', './assets/particle.png')
     }
 
     create() {
@@ -53,11 +54,26 @@ class Play extends Phaser.Scene {
 
         this.gameOver = false;
         scoreConfig.fixedWidth = 0
-        this.clock = this.time.delayedCall(60000, () => {
+        this.clock = this.time.delayedCall(game.settings.gameTimer, () => {
             this.add.text(game.config.width/2, game.config.height/2, 'GAME OVER', scoreConfig).setOrigin(0.5)
             this.add.text(game.config.width/2, game.config.height/2 + 64, 'Press (R) to Restart or ← for Menu', scoreConfig).setOrigin(0.5)
             this.gameOver = true
         }, null, this)
+
+        this.timer = game.settings.gameTimer
+        this.timerRight = this.add.text(game.config.width - borderUISize - borderPadding * 4, borderUISize + borderPadding * 2, this.timer, scoreConfig)
+
+        this.fireText = this.add.text(game.config.width / 2 - 16, borderUISize + borderPadding * 2 , "FIRE", scoreConfig)
+        this.fireText.alpha = 0
+
+
+        this.input.mouse.disableContextMenu()
+
+        this.input.on('pointerdown', (pointer) => {
+            if(pointer.leftButtonDown()){
+                this.p1Rocket.fire()
+            }
+        })
     }
 
     update() { 
@@ -87,6 +103,8 @@ class Play extends Phaser.Scene {
             this.p1Rocket.reset()
             this.shipExplode(this.ship01)
         }
+        this.timer = game.settings.gameTimer - this.clock.elapsed
+        this.timerRight.text = this.timer/1000 - (this.timer/1000) % 1 + 1
     }
 
     
@@ -98,11 +116,19 @@ class Play extends Phaser.Scene {
         ship.alpha = 0
         let boom = this.add.sprite(ship.x, ship.y, 'explosion').setOrigin(0, 0)
         boom.anims.play('explode')
+        let sparkles = this.add.particles(boom.x+40, boom.y+30, 'particle', {
+            speed: 100,
+            lifespan: 1000,
+            gravityY: 50
+        })
         boom.on('animationcomplete', () => {
             ship.reset()
             ship.alpha = 1
             boom.destroy()
+            sparkles.alpha = 0
+
         })
+        this.clock.elapsed -= 5000
         this.p1score += ship.points
         this.scoreLeft.text = this.p1score
         this.sound.play('sfx_explosion')
